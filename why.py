@@ -181,7 +181,7 @@ if __name__ == '__main__':
     _arg_parser = argparse.ArgumentParser(
         prog="why(.py) did we bother. Written by TKFRvision",
         description="A programm to pack zips for Cars 2: The Videogame",
-        epilog="https://github.com/TKFRvisionOfficial/CARS2/blob/main/why.py",
+        epilog="https://github.com/TKFRvisionOfficial/Cars2TheVideoGameModding/blob/main/why.py",
     )
     _arg_parser.add_argument("in_folder", help="The files of this folder will get packed.")
     _arg_parser.add_argument("out_file", help="The destination of the file that will be generated.")

@@ -12,6 +12,9 @@ from typing import BinaryIO
 import hashlib
 
 
+MD5_HEADER = struct.pack("7B", 75, 70, 19, 0, 77, 68, 53)  # from an original file
+
+
 class ZipEndLocator:
     def __init__(self, signature: int, disk_number: int, start_disk_number: int, entries_on_disk: int,
                  total_entries: int, directory_size: int, directory_offset: int, comment: str):
@@ -95,9 +98,6 @@ class ZipDirEntry:
                            self.header_offset, file_name_bytes, self.extra_field, comment_bytes)
 
 
-MD5_HEADER = struct.pack("7B", 75, 70, 19, 0, 77, 68, 53)
-
-
 def hash_md5(path: str) -> bytes:
     md5_hash = hashlib.md5()
     with open(path, "rb") as file:
@@ -114,8 +114,8 @@ def chunk_iter(file: BinaryIO, end: int, step: int = 4096):
             yield file.read(distance_to_end)
 
 
-def edit_and_write_zip_end_locators(file_from: BinaryIO, file_to: BinaryIO, from_loc: int, to_loc: int,
-                                    md5_hashes: dict, to_add: int):
+def update_and_write_dir_entries(file_from: BinaryIO, file_to: BinaryIO, from_loc: int, to_loc: int,
+                                 md5_hashes: dict, to_add: int):
     file_from.seek(from_loc)
     while file_from.tell() < to_loc:
         zip_dir_entry = ZipDirEntry.from_file(file_from)
@@ -125,47 +125,67 @@ def edit_and_write_zip_end_locators(file_from: BinaryIO, file_to: BinaryIO, from
         file_to.write(zip_dir_entry.to_bytes())
 
 
-_PATH = r"C:\Program Files (x86)\Steam\steamapps\common\Cars 2\backup\mcqueen"
-_tmp_dir = tempfile.mkdtemp()
-try:
-    # Build normal archive and create md5 hashes
-    _md5_hashes = {}
-    _tmp_zip_path = os.path.join(_tmp_dir, "archive.zip")
-    with zipfile.ZipFile(_tmp_zip_path, "w") as _tmp_file:
-        for _folder_name, _, _filenames in os.walk(_PATH):
-            for _filename in _filenames:
-                _file_path = os.path.join(_folder_name, _filename)
-                _internal_path = os.path.relpath(_file_path, _PATH).replace("\\", "/")
-                _md5_hashes[_internal_path] = hash_md5(_file_path)
-                _tmp_file.write(_file_path, _internal_path, zipfile.ZIP_DEFLATED)
+def main(in_folder: str, out_file: str):
+    tmp_dir = tempfile.mkdtemp()
+    try:
+        # Build normal archive and generate md5 hashes
+        md5_hashes = {}
+        tmp_zip_path = os.path.join(tmp_dir, "archive.zip")
+        with zipfile.ZipFile(tmp_zip_path, "w") as tmp_file:
+            for folder_name, _, filenames in os.walk(in_folder):
+                for filename in filenames:
+                    file_path = os.path.join(folder_name, filename)
+                    internal_path = os.path.relpath(file_path, in_folder).replace("\\", "/")
+                    md5_hashes[internal_path] = hash_md5(file_path)
+                    tmp_file.write(file_path, internal_path, zipfile.ZIP_DEFLATED)
 
-        _zip_info = zipfile.ZipInfo.from_file(_tmp_zip_path)
-        # _zip_end_locator_offset = _tmp_file.header_offset
-    # Build "funky" archive
-    with open(_tmp_zip_path, "rb") as _tmp_file, open("frick.zip", "wb") as _final_file:
-        # need to add comment support here
-        _zip_end_locator_offset = os.path.getsize(_tmp_zip_path) - 22
+        # Build "funky" archive
+        with open(tmp_zip_path, "rb") as tmp_file, open(out_file, "wb") as final_file:
+            # need to add comment support here
+            zip_end_locator_offset = os.path.getsize(tmp_zip_path) - 22
+            zip_end_locator = ZipEndLocator.from_file(tmp_file, zip_end_locator_offset)
 
-        _zip_end_locator = ZipEndLocator.from_file(_tmp_file, _zip_end_locator_offset)
+            # calculate amount to add to the offsets
+            add_offset = (os.path.getsize(tmp_zip_path) - zip_end_locator.directory_offset) + zip_end_locator.total_entries * 23  # md5 is 23 bytes
 
-        # _add_offset = len(_zip_end_locator.to_bytes()) + _zip_end_locator.total_entries * 23   # md5 is 23 bytes
-        _add_offset = (os.path.getsize(_tmp_zip_path) - _zip_end_locator.directory_offset) + _zip_end_locator.total_entries * 23  # md5 is 23 bytes
+            # writing 1st end locators
+            tmp_file_directory_offset = zip_end_locator.directory_offset
+            zip_end_locator.directory_offset += add_offset
+            final_file.write(zip_end_locator.to_bytes())
 
-        _old_directory_offset = _zip_end_locator.directory_offset
-        _zip_end_locator.directory_offset += _add_offset
-        _final_file.write(_zip_end_locator.to_bytes())
+            # writing 1st dir entries
+            update_and_write_dir_entries(tmp_file, final_file, tmp_file_directory_offset, zip_end_locator_offset,
+                                         md5_hashes, add_offset)
 
-        edit_and_write_zip_end_locators(_tmp_file, _final_file, _old_directory_offset, _zip_end_locator_offset,
-                                        _md5_hashes, _add_offset)
+            # writing file records
+            tmp_file.seek(0)  # maybe make that not 0
+            for chunk in chunk_iter(tmp_file, tmp_file_directory_offset):
+                final_file.write(chunk)
 
-        _tmp_file.seek(0)  # maybe make that not 0
-        for _chunk in chunk_iter(_tmp_file, _old_directory_offset):
-            _final_file.write(_chunk)
+            # write 2nd dir entries
+            update_and_write_dir_entries(tmp_file, final_file, tmp_file_directory_offset, zip_end_locator_offset,
+                                         md5_hashes, add_offset)
 
-        edit_and_write_zip_end_locators(_tmp_file, _final_file, _old_directory_offset, _zip_end_locator_offset,
-                                        _md5_hashes, _add_offset)
-        _final_file.write(_zip_end_locator.to_bytes())
+            # write 2nd end locator
+            final_file.write(zip_end_locator.to_bytes())
+
+    finally:
+        shutil.rmtree(tmp_dir)
 
 
-finally:
-    shutil.rmtree(_tmp_dir)
+if __name__ == '__main__':
+    import argparse
+
+    _arg_parser = argparse.ArgumentParser(
+        prog="why(.py) did we bother. Written by TKFRvision",
+        description="A programm to pack zips for Cars 2: The Videogame",
+        epilog="https://github.com/TKFRvisionOfficial/CARS2/blob/main/why.py",
+    )
+    _arg_parser.add_argument("in_folder", help="The files of this folder will get packed.")
+    _arg_parser.add_argument("out_file", help="The destination of the file that will be generated.")
+    _args = _arg_parser.parse_args()
+
+    assert os.path.isdir(_args.in_folder), "folder is not valid"
+    assert not os.path.isdir(_args.out_file), "file destination is not valid"
+
+    main(_args.in_folder, _args.out_file)

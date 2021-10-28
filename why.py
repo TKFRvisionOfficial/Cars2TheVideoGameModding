@@ -121,7 +121,7 @@ def update_and_write_dir_entries(file_from: BinaryIO, file_to: BinaryIO, from_lo
         zip_dir_entry = ZipDirEntry.from_file(file_from)
         zip_dir_entry.header_offset += to_add
         zip_dir_entry.extra_field = md5_hashes[zip_dir_entry.file_name]
-        zip_dir_entry.external_attributes = 0  # overwriting them because orig files dosen't have them
+        zip_dir_entry.external_attributes = 0  # overwriting them because orig files doesn't have them
         file_to.write(zip_dir_entry.to_bytes())
 
 
@@ -146,11 +146,13 @@ def main(in_folder: str, out_file: str):
             zip_end_locator = ZipEndLocator.from_file(tmp_file, zip_end_locator_offset)
 
             # calculate amount to add to the offsets
-            add_offset = (os.path.getsize(tmp_zip_path) - zip_end_locator.directory_offset) + zip_end_locator.total_entries * 23  # md5 is 23 bytes
+            size_of_md5_fields = zip_end_locator.total_entries * 23  # md5 bytes + header
+            add_offset = (os.path.getsize(tmp_zip_path) - zip_end_locator.directory_offset) + size_of_md5_fields
 
             # writing 1st end locators
             tmp_file_directory_offset = zip_end_locator.directory_offset
             zip_end_locator.directory_offset += add_offset
+            zip_end_locator.directory_size += size_of_md5_fields
             final_file.write(zip_end_locator.to_bytes())
 
             # writing 1st dir entries

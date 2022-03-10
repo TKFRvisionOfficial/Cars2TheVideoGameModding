@@ -1,4 +1,5 @@
 #
+# Based on the research of the amazing "Teancum".
 # Written by TKFRvision (https://github.com/tkfrvisionofficial)
 # All Rights reserved
 #

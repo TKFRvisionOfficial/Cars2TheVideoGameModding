@@ -192,9 +192,7 @@ def main(file_in: str, file_out: str, bin_folder: str):
 
     if not os.path.isdir(bin_folder):
         os.mkdir(bin_folder)
-    else:
-        for _file in os.listdir(bin_folder):
-            os.remove(os.path.join(bin_folder, _file))
+
     with open(file_in, "rb") as scene_file:
         result_xml = convert_scene_xml(scene_file, store_bin_file)
 

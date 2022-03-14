@@ -72,9 +72,9 @@ def convert_data_table_to_xml(parent: ElementTree.Element,
             return
 
         # looking up tag
-        if scene_node.str_index > 1000:
-            print("na")
         name = string_table[scene_node.str_index]
+        if name[0].isdigit():  # stupid workaround because of xml limitation
+            name = "__" + name
 
         # creating our element
         own_element = ElementTree.SubElement(parent, name)
@@ -195,11 +195,12 @@ def main(file_in: str, file_out: str, bin_folder: Optional[str] = None):
             return True
         return False
 
-    if not os.path.isdir(bin_folder):
+    if bin_folder and not os.path.isdir(bin_folder):
         os.mkdir(bin_folder)
 
     with open(file_in, "rb") as scene_file:
         result_xml = convert_scene_xml(scene_file, store_bin_file)
+        print(scene_file.tell())
 
     with open(file_out, "w", encoding="utf-8") as xml_file:
         xml_file.write(minidom.parseString(ElementTree.tostring(result_xml)).toprettyxml(indent="   "))
@@ -220,6 +221,7 @@ def run_from_args(args: Sequence[str]):
 
     assert os.path.isfile(parsed_args.in_file), "Input file not found."
     assert not os.path.isdir(parsed_args.out_file), "Output file destination is invalid."
-    assert not os.path.isfile(parsed_args.texture_folder), "Texture folder is invalid."
+    if parsed_args.texture_folder:
+        assert not os.path.isfile(parsed_args.texture_folder), "Texture folder is invalid."
 
     main(parsed_args.in_file, parsed_args.out_file, parsed_args.texture_folder)

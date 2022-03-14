@@ -34,8 +34,7 @@ class SceneHeader:
         return cls(string_table_size, tree_size, endianness)
 
     def to_bytes(self) -> bytes:
-        return ENDIAN_MAGIC[self.endianness] + \
-               struct.pack(get_str_endianness(self.endianness) + self._STRUCT_STR,
+        return struct.pack(get_str_endianness(self.endianness) + self._STRUCT_STR,
                            ENDIAN_MAGIC[self.endianness],
                            self.string_table_size,
                            self.tree_size)

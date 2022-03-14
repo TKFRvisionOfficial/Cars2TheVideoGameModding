@@ -6,14 +6,14 @@
 
 import os
 import struct
-from typing import BinaryIO, List, Sequence, Callable, Iterator, Literal
+from typing import BinaryIO, List, Sequence, Callable, Iterator, Optional
 from xml.dom import minidom
 from xml.etree import ElementTree
 
-from scene_types import SceneHeader
-from ..utils import chunk_iter, get_str_endianness
+from .scene_types import SceneHeader, SceneNode
+from ..utils import chunk_iter, get_str_endianness, Endianness
 
-_STRING_ENCODING = "utf-8"  # i know that's stupid
+_STRING_ENCODING = "utf-8"  # I know that's stupid
 
 # ParentElement, Element, IteratorForReading, Did I actually read this and do anything?
 StoreBinFileType = Callable[[ElementTree.Element, ElementTree.Element, Iterator[bytes]], bool]
@@ -24,11 +24,15 @@ def read_string_table(input_stream: BinaryIO, size: int) -> List[str]:
     return [data_string.decode(_STRING_ENCODING) for data_string in string_array_bytes.split(b"\x00")]
 
 
-def convert_data_table_to_xml(parent: ElementTree.Element, string_table: Sequence[str], input_stream: BinaryIO,
+def convert_data_table_to_xml(parent: ElementTree.Element,
+                              string_table: Sequence[str],
+                              input_stream: BinaryIO,
                               target_pos: int,
-                              endianness: Literal["big", "little"],
+                              endianness: Endianness,
                               file_func: StoreBinFileType = None,
                               level: int = 1):
+    str_endianness = get_str_endianness(endianness)
+
     def read_array(element_to_write: ElementTree.Element, count_size: int, element_size: int,
                    conv: Callable[[bytes], str]):
         count = int.from_bytes(input_stream.read(count_size), endianness, signed=False)
@@ -41,7 +45,7 @@ def convert_data_table_to_xml(parent: ElementTree.Element, string_table: Sequenc
         # this is so the implementation for file handling is more flexible
         if file_func:
             count = int.from_bytes(input_stream.read(count_size), endianness, signed=False)
-            if file_func(parent, element_to_write, chunk_iter(input_stream, count * element_size)):
+            if file_func(parent, element_to_write, chunk_iter(input_stream, input_stream.tell() + count * element_size)):
                 return
             else:
                 input_stream.seek(-count_size, os.SEEK_CUR)
@@ -55,32 +59,32 @@ def convert_data_table_to_xml(parent: ElementTree.Element, string_table: Sequenc
 
     def read_array_float(element_to_write: ElementTree.Element, count_size: int):
         read_array(element_to_write, count_size, 4,
-                   lambda in_data: str(struct.unpack(get_str_endianness(endianness) + "f", in_data)[0]))
+                   lambda in_data: str(struct.unpack(str_endianness + "f", in_data)[0]))
 
     while input_stream.tell() < target_pos:
         # read flag
-        flag = int.from_bytes(input_stream.read(2), endianness)
-        flag_level, data_format = divmod(flag, 0x400)
+        scene_node = SceneNode.from_bytes(input_stream.read(4), endianness)
 
         # check if we have to go up a level
-        if flag_level < level:
+        if scene_node.level < level:
             # restoring offset from before flag and name read
-            input_stream.seek(-2, os.SEEK_CUR)
+            input_stream.seek(-SceneNode.get_size(), os.SEEK_CUR)
             return
 
-        # reading tag
-        name_index = int.from_bytes(input_stream.read(2), endianness)
-        name = string_table[name_index]
+        # looking up tag
+        if scene_node.str_index > 1000:
+            print("na")
+        name = string_table[scene_node.str_index]
 
         # creating our element
         own_element = ElementTree.SubElement(parent, name)
 
         # checking the data format
-        match data_format:
+        match scene_node.type_int:
             case 0x01:  # empty
                 pass
             case 0x05 | 0x0B:  # String from table; id (uint16)  | 0x3a7 timestamp
-                if data_format == 0x05:
+                if scene_node.type_int == 0x05:
                     own_element.set("type", "reference_string")
                 else:
                     own_element.set("type", "string")
@@ -95,7 +99,7 @@ def convert_data_table_to_xml(parent: ElementTree.Element, string_table: Sequenc
                 read_array_float(own_element, 1)
             case 0x13:  # float
                 own_element.set("type", "float")
-                own_element.text = str(struct.unpack(get_str_endianness(endianness) + "f", input_stream.read(4))[0])
+                own_element.text = str(struct.unpack(str_endianness + "f", input_stream.read(4))[0])
             case 0x1A:  # list of int8; count (uint8)
                 own_element.set("type", "int8_list")
                 read_array_int(own_element, 1, 1, True)
@@ -106,11 +110,13 @@ def convert_data_table_to_xml(parent: ElementTree.Element, string_table: Sequenc
                 own_element.set("type", "uint8_list")
                 read_array_int(own_element, 1, 1, False)
             case 0x4A | 0x15A:  # list of (uint16); count (uint16)
-                own_element.set("type_id", str(data_format))
-                own_element.set("type", "uint16_uint16_list")
+                if scene_node.type_int == 0x4A:
+                    own_element.set("type", "uint16_uint16_list")
+                else:
+                    own_element.set("type", "uint16_uint16_list_alt")
                 read_array_int(own_element, 2, 2, False)
             case 0x5A | 0x63:  # list of uint8; count (uint16)
-                if data_format == 0x5A:
+                if scene_node.type_int == 0x5A:
                     own_element.set("type", "uint16_uint8_list")
                 else:
                     own_element.set("type", "uint16_uint8_bin")
@@ -138,7 +144,7 @@ def convert_data_table_to_xml(parent: ElementTree.Element, string_table: Sequenc
                 own_element.set("type", "uint24_uint8_bin")
                 read_array_int(own_element, 3, 1, False)
             case _:
-                raise ValueError(f"Unkown DataFormat {hex(data_format)} at {hex(input_stream.tell())}")
+                raise ValueError(f"Unknown DataFormat {hex(scene_node.type_int)} at {hex(input_stream.tell())}")
 
         # check if we already reached the end of the file
         # this is a botch to prevent an infinite loop
@@ -146,12 +152,12 @@ def convert_data_table_to_xml(parent: ElementTree.Element, string_table: Sequenc
             return
 
         # reading next flag to check if we have to go down a level
-        flag = int.from_bytes(input_stream.read(2), endianness)
-        flag_level, data_format = divmod(flag, 0x400)
-        input_stream.seek(-2, os.SEEK_CUR)
+        scene_node = SceneNode.from_bytes(input_stream.read(scene_node.get_size()), endianness)
+        input_stream.seek(-SceneNode.get_size(), os.SEEK_CUR)
 
-        if flag_level > level:
-            convert_data_table_to_xml(own_element, string_table, input_stream, target_pos, endianness, file_func, flag_level)
+        if scene_node.level > level:
+            convert_data_table_to_xml(own_element, string_table, input_stream, target_pos, endianness, file_func,
+                                      scene_node.level)
 
 
 def convert_scene_xml(input_stream: BinaryIO, store_bin_file: StoreBinFileType = None):
@@ -176,12 +182,11 @@ def convert_scene_xml(input_stream: BinaryIO, store_bin_file: StoreBinFileType =
     return root
 
 
-def main(file_in: str, file_out: str, bin_folder: str):
-
+def main(file_in: str, file_out: str, bin_folder: Optional[str] = None):
     def store_bin_file(parent_element: ElementTree.Element,
                        element: ElementTree.Element,
                        dds_data: Iterator[bytes]) -> bool:
-        if parent_element.tag == "Texture" and element.tag == "Data":
+        if bin_folder and parent_element.tag == "Texture" and element.tag == "Data":
             filename = f"{parent_element.find('./Name').text}.dds"
             with open(os.path.join(bin_folder, filename), "wb") as bin_file:
                 for bin_chunk in dds_data:
@@ -210,7 +215,7 @@ def run_from_args(args: Sequence[str]):
 
     arg_parser.add_argument("in_file", help="The scene file to convert.")
     arg_parser.add_argument("out_file", help="The resulting xml file.")
-    arg_parser.add_argument("texture_folder", help="A folder to store the textures in.")
+    arg_parser.add_argument("-t", dest="texture_folder", help="A folder to store the textures in.")
     parsed_args = arg_parser.parse_args(args)
 
     assert os.path.isfile(parsed_args.in_file), "Input file not found."

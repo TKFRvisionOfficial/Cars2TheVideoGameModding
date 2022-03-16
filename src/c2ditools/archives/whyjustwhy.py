@@ -73,7 +73,7 @@ def main(in_folder: str, out_file: str):
             update_and_write_dir_entries(tmp_file, final_file, zip_end_locator.directory_offset, zip_end_locator_offset,
                                          md5_hashes, size_enc_header)
 
-            # write 2nd end locator
+            # write end locator
             cipher = AES.new(ENC_KEY, AES.MODE_CTR, nonce=b"")
             size_of_md5_fields = zip_end_locator.total_entries * 23  # md5 bytes + header
             zip_end_locator.directory_offset += size_enc_header + size_of_md5_fields

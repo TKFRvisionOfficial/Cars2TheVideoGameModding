@@ -49,7 +49,7 @@ def main(in_folder: str, out_file: str):
                 zip_dir_entry = ZipDirEntry.from_file(tmp_file)
                 zip_dir_entries.append(zip_dir_entry)
                 # thanks jiro 😉
-                enc_file_entry = EncFileEntry(mmh3.hash(zip_dir_entry.file_name), zip_dir_entry.header_offset + size_enc_header)
+                enc_file_entry = EncFileEntry(mmh3.hash(zip_dir_entry.file_name, signed=False), zip_dir_entry.header_offset + size_enc_header)
                 enc_file_entries.append(enc_file_entry)
 
             # writing enc file header

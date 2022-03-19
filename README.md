@@ -8,7 +8,7 @@ It will create a zip with all the files in the inputfolder.
 
 #### [whyjustwhy](/src/c2ditools/archives/whyjustwhy.py)
 A tool to pack encrypted zips for Cars 2, Toy Story 3 and Disney 1.0 and 2.0.<br>
-⚠ This is not working right now because I can't figure out how to calculate the crc32.<br>
+⚠ Untested<br>
 Run it using `python -m c2ditools whyjustwhy <inputfolder> <outputfile>`. 
 It will create a zip with all the files in the inputfolder.
 

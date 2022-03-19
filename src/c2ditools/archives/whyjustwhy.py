@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 from .archive_utils import ZipEndLocator, ZipDirEntry, ZipFileRecord, EncFileHeader, EncFileEntry, create_md5_zip, ENC_KEY
 from ..utils import chunk_iter
 from typing import BinaryIO, Sequence
-import zlib
+import mmh3
 
 
 def update_and_write_dir_entries(file_from: BinaryIO, file_to: BinaryIO, from_loc: int, to_loc: int,
@@ -48,8 +48,8 @@ def main(in_folder: str, out_file: str):
             while tmp_file.tell() < zip_end_locator_offset:
                 zip_dir_entry = ZipDirEntry.from_file(tmp_file)
                 zip_dir_entries.append(zip_dir_entry)
-                # the crc32 calc is not working.
-                enc_file_entry = EncFileEntry(zlib.crc32(zip_dir_entry.file_name.encode("utf-8")), zip_dir_entry.header_offset + size_enc_header)
+                # thanks jiro 😉
+                enc_file_entry = EncFileEntry(mmh3.hash(zip_dir_entry.file_name), zip_dir_entry.header_offset + size_enc_header)
                 enc_file_entries.append(enc_file_entry)
 
             # writing enc file header

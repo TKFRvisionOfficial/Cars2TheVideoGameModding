@@ -13,7 +13,7 @@ setuptools.setup(
     url="https://github.com/TKFRvisionOfficial/Cars2TheVideoGameModding",
     install_requires=[
         "pycryptodome",
-        "mmh3",
+        "pymmh3",
     ],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),

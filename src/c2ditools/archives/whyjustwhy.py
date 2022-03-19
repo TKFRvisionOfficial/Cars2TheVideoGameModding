@@ -7,7 +7,11 @@ from Crypto.Cipher import AES
 from .archive_utils import ZipEndLocator, ZipDirEntry, ZipFileRecord, EncFileHeader, EncFileEntry, create_md5_zip, ENC_KEY
 from ..utils import chunk_iter
 from typing import BinaryIO, Sequence
-import mmh3
+
+try:
+    import mmh3 as mmh3
+except ImportError:
+    import pymmh3 as mmh3
 
 
 def update_and_write_dir_entries(file_from: BinaryIO, file_to: BinaryIO, from_loc: int, to_loc: int,

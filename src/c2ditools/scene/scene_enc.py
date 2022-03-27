@@ -24,7 +24,7 @@ def create_string_table(input_xml: ElementTree.Element) -> List[str]:
     string_set = set()
     for element in input_xml.iterfind(".//"):
         # xml workaround
-        string_set.add(element.tag.strip("__"))
+        string_set.add(element.tag.strip("__").replace("_____", " "))
     for element in itertools.chain(input_xml.iterfind(".//*[@type='string']"), input_xml.iterfind(".//*[@type='reference_string']")):
         if element.text is None:
             continue  # probably empty string better check that out later
@@ -145,7 +145,9 @@ def convert_xml_to_table(cur_element: ElementTree.Element, string_table: Sequenc
                 raise ValueError(f"Unknown DataFormat {data_format}.")
 
         # __ is a xml workaround
-        output_stream.write(SceneNode(level, type_id, string_table.index(element.tag.strip("__"))).to_bytes(endianness))
+        output_stream.write(SceneNode(level, type_id,
+                                      string_table.index(element.tag.strip("__").replace("_____", " ")
+                                                         )).to_bytes(endianness))
 
         if isinstance(to_write, Iterator):
             for chunk in to_write:

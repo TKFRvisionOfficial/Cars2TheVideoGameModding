@@ -75,6 +75,7 @@ def convert_data_table_to_xml(parent: ElementTree.Element,
         name = string_table[scene_node.str_index]
         if name[0].isdigit():  # stupid workaround because of xml limitation
             name = "__" + name
+        name = name.replace(" ", "_____")  # even more stupid workaround because of space
 
         # creating our element
         own_element = ElementTree.SubElement(parent, name)

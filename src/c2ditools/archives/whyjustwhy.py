@@ -63,7 +63,9 @@ def main(in_folder: str, out_file: str):
 
             # reading and writing zip file records
             tmp_file.seek(0)
-            for next_offset in sorted(itertools.chain((enc_file_entry.header_offset for enc_file_entry in zip_dir_entries[1:]), (zip_end_locator.directory_offset,))):
+            for next_offset in sorted(itertools.chain(
+                    (enc_file_entry.header_offset for enc_file_entry in zip_dir_entries[1:]),
+                    (zip_end_locator.directory_offset,))):
                 cipher = AES.new(ENC_KEY, AES.MODE_CTR, nonce=b"")
                 zip_file_record = ZipFileRecord.from_file(tmp_file)
                 final_file.write(cipher.encrypt(zip_file_record.to_bytes()))

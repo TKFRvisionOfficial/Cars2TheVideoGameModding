@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as readme_file:
 
 setuptools.setup(
     name="c2ditools-TKFRvision",
-    version="0.1.2",
+    version="0.1.3",
     author="TKFRvision",
     description="Modding tools for Cars 2 and Disney Infinity",
     long_description=long_description,

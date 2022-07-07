@@ -104,3 +104,4 @@ if __name__ == '__main__':
     _args = _parser.parse_args()
 
     main(_args.thb_file, _args.tbb_file, _args.tstream_dir, _args.output_file, _args.output_json)
+

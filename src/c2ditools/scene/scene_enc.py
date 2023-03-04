@@ -141,6 +141,9 @@ def convert_xml_to_table(cur_element: ElementTree.Element, string_table: Sequenc
             case "uint24_uint8_bin":
                 type_id = 0xA3
                 to_write = array_to_bytes_int(element, 3, 1, False)
+            case "float_u16_list":
+                type_id = 0x52
+                to_write = array_to_bytes_float(element, 2)
             case _:
                 raise ValueError(f"Unknown DataFormat {data_format}.")
 

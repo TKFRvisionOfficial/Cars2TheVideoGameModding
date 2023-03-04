@@ -144,6 +144,9 @@ def convert_data_table_to_xml(parent: ElementTree.Element,
             case 0xA3:  # list (uint8); count uint24
                 own_element.set("type", "uint24_uint8_bin")
                 read_array_int(own_element, 3, 1, False)
+            case 0x52:  # list (float); count u16
+                own_element.set("type", "float_u16_list")
+                read_array_float(own_element, 2)
             case _:
                 raise ValueError(f"Unknown DataFormat {hex(scene_node.type_int)} at {hex(input_stream.tell())}")
 

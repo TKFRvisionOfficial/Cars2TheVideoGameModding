@@ -23,7 +23,7 @@ class SceneHeader:
         return struct.calcsize(cls._STRUCT_STR)
 
     @classmethod
-    def from_file(cls, input_stream: BinaryIO):
+    def from_file(cls, input_stream: BinaryIO) -> "SceneHeader":
         magic = input_stream.read(12)
         endianness = MAGIC_ENDIAN.get(magic)
         if endianness is None:
@@ -52,11 +52,11 @@ class SceneNode:
                + self.str_index.to_bytes(2, endianness, signed=False)
 
     @classmethod
-    def from_bytes(cls, data: bytes, endianness: Endianness):
+    def from_bytes(cls, data: bytes, endianness: Endianness) -> "SceneNode":
         level, type_int = divmod(int.from_bytes(data[:2], endianness), 0x400)
         str_index = int.from_bytes(data[2:], endianness)
         return cls(level, type_int, str_index)
 
     @staticmethod
-    def get_size():
+    def get_size() -> int:
         return 4

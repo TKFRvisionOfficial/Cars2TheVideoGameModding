@@ -1,13 +1,15 @@
 # Cars2TheVideoGameModding
 Tools for modding Cars 2: The Video Game and other Avalanche games like Toy Story 3 or Disney Infinity.
 
+THIS PROJECT IS IN NO WAY ASSOCIATED WITH *DISNEY*, *DISNEY INTERACTIVE*, *AVALANCHE SOFTWARE* OR *Warner Bros. Interactive Entertainment*.
+
 #### [why](/src/c2ditools/archives/why.py)
-A tool to pack unencrypted zips for Cars 2, Toy Story 3 and Disney 1.0 and 2.0.
+A tool to pack unencrypted zips for Cars 2, Toy Story 3 and Disney Infinity 1.0 and 2.0.
 Run it using `python -m c2ditools why <inputfolder> <outputfile>`. 
 It will create a zip with all the files in the inputfolder.
 
 #### [whyjustwhy](/src/c2ditools/archives/whyjustwhy.py)
-A tool to pack encrypted zips for Cars 2, Toy Story 3 and Disney 1.0 and 2.0.<br>
+A tool to pack encrypted zips for Disney Infinity 3.0.<br>
 ⚠ Untested<br>
 Run it using `python -m c2ditools whyjustwhy <inputfolder> <outputfile>`. 
 It will create a zip with all the files in the inputfolder.

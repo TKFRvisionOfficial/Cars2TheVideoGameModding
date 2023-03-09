@@ -92,6 +92,9 @@ def convert_xml_to_table(cur_element: ElementTree.Element, string_table: Sequenc
             case "string_list":
                 type_id = 0x0A
                 to_write = array_to_bytes_str(element, 1)
+            case "uint16_string_list":
+                type_id = 0x4A
+                to_write = array_to_bytes_str(element, 2)
             case "float_list":
                 type_id = 0x12
                 to_write = array_to_bytes_float(element, 1)
@@ -107,11 +110,8 @@ def convert_xml_to_table(cur_element: ElementTree.Element, string_table: Sequenc
             case "uint8_list":
                 type_id = 0x23
                 to_write = array_to_bytes_int(element, 1, 1, False)
-            case "uint16_uint16_list" | "uint16_uint16_list_alt":
-                if data_format == "uint16_uint16_list":
-                    type_id = 0x4A
-                else:
-                    type_id = 0x15A
+            case "uint16_uint16_list":
+                type_id = 0x15A
                 to_write = array_to_bytes_int(element, 2, 2, False)
             case "uint16_uint8_list" | "uint16_uint8_bin":
                 if data_format == "uint16_uint8_list":

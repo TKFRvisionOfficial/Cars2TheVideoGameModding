@@ -95,6 +95,9 @@ def convert_data_table_to_xml(parent: ElementTree.Element,
             case 0x0A:  # list of strings from table; count (uint8), id (uint16)
                 own_element.set("type", "string_list")
                 read_array_str(own_element, 1)
+            case 0x4A:  # list of string from table; count(uint16), id (uint16)
+                own_element.set("type", "uint16_string_list")
+                read_array_str(own_element, 2)
             case 0x12:  # list of float; count (uint8), float
                 own_element.set("type", "float_list")
                 read_array_float(own_element, 1)
@@ -110,11 +113,8 @@ def convert_data_table_to_xml(parent: ElementTree.Element,
             case 0x23:  # list of uint8; count (uint8)
                 own_element.set("type", "uint8_list")
                 read_array_int(own_element, 1, 1, False)
-            case 0x4A | 0x15A:  # list of (uint16); count (uint16)
-                if scene_node.type_int == 0x4A:
-                    own_element.set("type", "uint16_uint16_list")
-                else:
-                    own_element.set("type", "uint16_uint16_list_alt")
+            case 0x15A:  # list of (uint16); count (uint16)
+                own_element.set("type", "uint16_uint16_list")
                 read_array_int(own_element, 2, 2, False)
             case 0x5A | 0x63:  # list of uint8; count (uint16)
                 if scene_node.type_int == 0x5A:

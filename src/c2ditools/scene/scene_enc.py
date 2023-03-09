@@ -29,7 +29,8 @@ def create_string_table(input_xml: ElementTree.Element) -> List[str]:
         if element.text is None:
             continue  # probably empty string better check that out later
         string_set.add(element.text.strip())
-    for element in input_xml.iterfind(".//*[@type='string_list']/entry"):
+    for element in itertools.chain(input_xml.iterfind(".//*[@type='string_list']/entry"),
+                                   input_xml.iterfind(".//*[@type='uint16_string_list']/entry")):
         string_set.add(element.text)
     for element in input_xml.iterfind(".//*[@type='string_float32_list']"):
         string_set.add(element.text.strip())

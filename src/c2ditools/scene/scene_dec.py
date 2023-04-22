@@ -95,6 +95,16 @@ def convert_data_table_to_xml(parent: ElementTree.Element,
             case 0x0A:  # list of strings from table; count (uint8), id (uint16)
                 own_element.set("type", "string_list")
                 read_array_str(own_element, 1)
+            case 0x0F:  # string with string (I think 😂)
+                own_element.set("type", "string_string")
+                own_element.text = string_table[int.from_bytes(input_stream.read(2), endianness, signed=False)]
+                main_data = string_table[int.from_bytes(input_stream.read(2), endianness, signed=False)]
+                own_element.set("content", main_data)
+            case 0x1F:  # int8 with string
+                own_element.set("type", "uint8_string")
+                own_element.text = string_table[int.from_bytes(input_stream.read(2), endianness, signed=False)]
+                main_data = input_stream.read(1)
+                own_element.set("content", str(main_data))
             case 0x4A:  # list of string from table; count(uint16), id (uint16)
                 own_element.set("type", "uint16_string_list")
                 read_array_str(own_element, 2)

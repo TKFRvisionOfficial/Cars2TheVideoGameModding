@@ -29,6 +29,10 @@ def create_string_table(input_xml: ElementTree.Element) -> List[str]:
         if element.text is None:
             continue  # probably empty string better check that out later
         string_set.add(element.text.strip())
+    for element in itertools.chain(input_xml.iterfind(".//*[type='string_string']"),
+                                   input_xml.iterfind(".//*[type='uint8_string']")):
+        string_set.add(element.text.strip())
+        string_set.add(element.get("content").strip())
     for element in itertools.chain(input_xml.iterfind(".//*[@type='string_list']/entry"),
                                    input_xml.iterfind(".//*[@type='uint16_string_list']/entry")):
         string_set.add(element.text)
@@ -93,6 +97,14 @@ def convert_xml_to_table(cur_element: ElementTree.Element, string_table: Sequenc
             case "string_list":
                 type_id = 0x0A
                 to_write = array_to_bytes_str(element, 1)
+            case "string_string":
+                type_id = 0x0F
+                to_write = string_table.index(element.text.strip()).to_bytes(2, endianness, signed=False)
+                to_write += string_table.index(element.get("content").strip()).to_bytes(2, endianness, signed=False)
+            case "uint8_string":
+                type_id = 0x1F
+                to_write = string_table.index(element.text.strip()).to_bytes(2, endianness, signed=False)
+                to_write += int(element.get("content").strip()).to_bytes(1, endianness, signed=False)
             case "uint16_string_list":
                 type_id = 0x4A
                 to_write = array_to_bytes_str(element, 2)

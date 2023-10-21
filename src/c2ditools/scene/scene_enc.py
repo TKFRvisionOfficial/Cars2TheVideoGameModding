@@ -27,11 +27,11 @@ def create_string_table(input_xml: ElementTree.Element) -> List[str]:
         string_set.add(element.tag.strip("__").replace("_____", " "))
     for element in itertools.chain(input_xml.iterfind(".//*[@type='string']"),
                                    input_xml.iterfind(".//*[@type='reference_string']"),
-                                   input_xml.iterfind(".//*[type='uint8_string']")):
+                                   input_xml.iterfind(".//*[@type='uint8_string']")):
         if element.text is None:
             continue  # probably empty string better check that out later
         string_set.add(element.text.strip())
-    for element in input_xml.iterfind(".//*[type='string_string']"):
+    for element in input_xml.iterfind(".//*[@type='string_string']"):
         string_set.add(element.text.strip())
         string_set.add(element.get("content").strip())
     for element in itertools.chain(input_xml.iterfind(".//*[@type='string_list']/entry"),

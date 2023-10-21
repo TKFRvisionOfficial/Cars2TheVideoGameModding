@@ -103,7 +103,7 @@ def convert_data_table_to_xml(parent: ElementTree.Element,
             case 0x1F:  # int8 with string
                 own_element.set("type", "uint8_string")
                 own_element.text = string_table[int.from_bytes(input_stream.read(2), endianness, signed=False)]
-                main_data = input_stream.read(1)
+                main_data = int.from_bytes(input_stream.read(1), endianness, signed=False)
                 own_element.set("content", str(main_data))
             case 0x4A:  # list of string from table; count(uint16), id (uint16)
                 own_element.set("type", "uint16_string_list")
